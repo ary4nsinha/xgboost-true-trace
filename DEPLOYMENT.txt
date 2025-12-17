@@ -1,0 +1,199 @@
+===============================================
+FASTAPI ML MODEL DEPLOYMENT GUIDE (Ubuntu VPS)
+===============================================
+
+REQUIRED FILES:
+- mlfastapi.py (FastAPI server)
+- best_sustainability_model.joblib (trained model)
+- model_metadata.json (model info)
+- requirements.txt (dependencies)
+
+===============================================
+DEPLOYMENT STEPS
+===============================================
+
+1. UPLOAD FILES TO VPS
+   - Upload all files to your VPS (e.g., /home/user/ml-api/)
+   - Or use git clone if in a repository
+
+2. INSTALL PYTHON & DEPENDENCIES
+   cd /home/user/ml-api/
+   python3 -m venv venv
+   source venv/bin/activate
+   pip install -r requirements.txt
+
+3. RUN THE SERVER
+
+   Option A - Simple foreground:
+   python mlfastapi.py
+
+   Option B - Background with nohup:
+   nohup python mlfastapi.py > output.log 2>&1 &
+
+   Option C - Keep terminal open with screen:
+   screen -S ml-api
+   python mlfastapi.py
+   # Press Ctrl+A then D to detach
+   # Use 'screen -r ml-api' to reattach
+
+4. EXPOSE WITH NGROK
+
+   Install ngrok (if not installed):
+   curl -s https://ngrok-agent.s3.amazonaws.com/ngrok.asc | sudo tee /etc/apt/trusted.gpg.d/ngrok.asc >/dev/null
+   echo "deb https://ngrok-agent.s3.amazonaws.com buster main" | sudo tee /etc/apt/sources.list.d/ngrok.list
+   sudo apt update && sudo apt install ngrok
+
+   Authenticate (get token from https://dashboard.ngrok.com):
+   ngrok config add-authtoken YOUR_TOKEN
+
+   Expose the API:
+   ngrok http 8000
+
+   Copy the https URL (e.g., https://abc123.ngrok.io)
+
+===============================================
+API ENDPOINTS
+===============================================
+
+After ngrok is running, your API will be available at:
+
+Base URL: https://YOUR-NGROK-URL.ngrok.io
+
+Endpoints:
+- GET  /              -> API info
+- GET  /health        -> Health check
+- POST /predict       -> Sustainability prediction
+- GET  /docs          -> Interactive API docs
+- GET  /redoc         -> Alternative API docs
+
+===============================================
+PREDICTION ENDPOINT DETAILS
+===============================================
+
+URL: https://YOUR-NGROK-URL.ngrok.io/predict
+Method: POST
+Content-Type: application/json
+
+REQUEST BODY (all 24 fields required):
+{
+  "Recycled Content %": 60.0,
+  "Virgin Content %": 40.0,
+  "Carbon Footprint (kg CO2e)": 80.0,
+  "Water Consumption (L)": 400.0,
+  "Power Consumption (kWh)": 30.0,
+  "Packaging Recycled Content %": 50.0,
+  "Expected Lifespan (yrs)": 7.0,
+  "Base Material": "metal",
+  "Contains Plastic": "no",
+  "Biodegradable": "no",
+  "Compostable": "no",
+  "Recyclability Level": "high",
+  "Reusability": "high",
+  "Repairability": "high",
+  "End-of-Life": "recyclable",
+  "Coating Type": "none",
+  "Mixed Materials": "no",
+  "Toxicity Concerns": "none",
+  "Packaging Material": "cardboard",
+  "Packaging Recyclable": "yes",
+  "Food Safe": "yes",
+  "Chemical Leaching Risk": "none",
+  "SVHC Presence": "no",
+  "Plasticizer Type": "none"
+}
+
+RESPONSE:
+{
+  "sustainability_score": 36.31,
+  "message": "Low sustainability score - consider improvements"
+}
+
+===============================================
+EXPRESS BACKEND INTEGRATION
+===============================================
+
+const axios = require('axios');
+
+const ML_API_URL = 'https://YOUR-NGROK-URL.ngrok.io/predict';
+
+app.post('/api/sustainability', async (req, res) => {
+  try {
+    const response = await axios.post(ML_API_URL, req.body);
+    res.json(response.data);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+===============================================
+TESTING
+===============================================
+
+Test with curl:
+curl -X POST "https://YOUR-NGROK-URL.ngrok.io/predict" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "Recycled Content %": 60.0,
+    "Virgin Content %": 40.0,
+    "Carbon Footprint (kg CO2e)": 80.0,
+    "Water Consumption (L)": 400.0,
+    "Power Consumption (kWh)": 30.0,
+    "Packaging Recycled Content %": 50.0,
+    "Expected Lifespan (yrs)": 7.0,
+    "Base Material": "metal",
+    "Contains Plastic": "no",
+    "Biodegradable": "no",
+    "Compostable": "no",
+    "Recyclability Level": "high",
+    "Reusability": "high",
+    "Repairability": "high",
+    "End-of-Life": "recyclable",
+    "Coating Type": "none",
+    "Mixed Materials": "no",
+    "Toxicity Concerns": "none",
+    "Packaging Material": "cardboard",
+    "Packaging Recyclable": "yes",
+    "Food Safe": "yes",
+    "Chemical Leaching Risk": "none",
+    "SVHC Presence": "no",
+    "Plasticizer Type": "none"
+  }'
+
+Or run test script (if uploaded):
+python test_api.py
+
+===============================================
+TROUBLESHOOTING
+===============================================
+
+Server not starting:
+- Check if port 8000 is in use: sudo lsof -i :8000
+- Check logs: cat output.log
+
+Ngrok issues:
+- Make sure server is running first
+- Check firewall allows port 8000
+- Verify ngrok authtoken is set
+
+Model errors:
+- Ensure all dependencies are installed
+- Check Python version (needs 3.8+)
+- Verify .joblib file uploaded correctly
+
+===============================================
+STOPPING THE SERVER
+===============================================
+
+If running with nohup:
+ps aux | grep mlfastapi
+kill <PID>
+
+If running with screen:
+screen -r ml-api
+# Press Ctrl+C
+
+
+- CORS is enabled for all origins (*)
+- Host is set to 0.0.0.0 (accepts connections from anywhere)
+- Server runs on port 8000
+- For production, use paid ngrok or proper domain

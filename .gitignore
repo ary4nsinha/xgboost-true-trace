@@ -1,0 +1,57 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+*.egg-info/
+dist/
+build/
+*.egg
+
+venv/
+env/
+ENV/
+.venv
+
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Logs
+*.log
+logs/
+output.log
+err.log
+out.log
+combined.log
+
+# Environment Variables
+.env
+.env.local
+
+# Model files (optional - uncomment if models are too large for git)
+# *.joblib
+# *.pkl
+# *.h5
+# *.pt
+
+# Jupyter Notebook
+.ipynb_checkpoints/
+*.ipynb
+
+# Testing
+.pytest_cache/
+.coverage
+htmlcov/
+
+# ngrok
+ngrok
+ngrok.exe
+ngrok.yml
